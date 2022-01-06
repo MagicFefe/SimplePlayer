@@ -1,18 +1,17 @@
 package com.app.simpleplayer.data
 
+import android.content.ContentResolver
 import android.content.ContentUris
 import android.content.Context
 import android.os.Build
 import android.provider.MediaStore
 import com.app.simpleplayer.domain.models.Song
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
-import kotlinx.coroutines.withContext
 
-class MusicManager(private val context: Context): ResolverWrapper<Song>(context) {
+class MusicManager(private val context: Context) : ContentResolver(context) {
 
-    override fun getExternalContent(): Flow<List<Song>> = flow {
+    fun getExternalContent(): Flow<List<Song>> = flow {
         val songs = mutableListOf<Song>()
 
         val collection =

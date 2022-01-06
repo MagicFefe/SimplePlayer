@@ -1,7 +1,7 @@
 package com.app.simpleplayer.di.presentation.viewmodel
 
 import androidx.lifecycle.ViewModel
-import com.app.simpleplayer.presentation.ListSongsScreenViewModelImpl
+import com.app.simpleplayer.presentation.screens.home.HomeScreenViewModel
 import dagger.Binds
 import dagger.Module
 import dagger.multibindings.IntoMap
@@ -11,6 +11,6 @@ interface ViewModelModule {
 
     @Binds
     @IntoMap
-    @CreateViewModelWithFactory(ListSongsScreenViewModelImpl::class)
-    fun bindListSongsScreenViewModel(viewModelImplMain: ListSongsScreenViewModelImpl): ViewModel
+    @CreateViewModelWithFactory(HomeScreenViewModel::class)
+    fun bindListSongsScreenViewModel(viewModelMain: HomeScreenViewModel): ViewModel
 }

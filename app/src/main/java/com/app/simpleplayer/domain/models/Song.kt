@@ -8,5 +8,5 @@ data class Song(
     val id: Long,
     val title: String,
     val dateAdded: Int,
-    override val uri: Uri
-): MediaElement
+    val uri: Uri
+)

@@ -9,5 +9,5 @@ import dagger.Provides
 class StorageAccessModule {
 
     @Provides
-    fun provideMusicManager(context: Context) = MusicManager(context)
+    fun provideMusicManager(context: Context): MusicManager = MusicManager(context)
 }

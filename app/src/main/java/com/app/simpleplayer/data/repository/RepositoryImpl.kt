@@ -8,7 +8,6 @@ import javax.inject.Inject
 
 class RepositoryImpl @Inject constructor(
     private val musicManager: MusicManager
-): Repository {
-
+) : Repository {
     override fun getMusic(): Flow<List<Song>> = musicManager.getExternalContent()
 }
