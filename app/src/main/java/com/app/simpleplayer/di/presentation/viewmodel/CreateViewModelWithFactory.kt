@@ -1,3 +1,5 @@
+@file:Suppress("unused")
+
 package com.app.simpleplayer.di.presentation.viewmodel
 
 import androidx.lifecycle.ViewModel

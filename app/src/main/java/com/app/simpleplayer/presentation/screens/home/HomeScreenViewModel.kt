@@ -18,7 +18,7 @@ import kotlinx.coroutines.flow.stateIn
 import javax.inject.Inject
 
 class HomeScreenViewModel @Inject constructor(
-    private val getMusicFromExternalStorageUseCase: GetMusicFromExternalStorageUseCase
+    getMusicFromExternalStorageUseCase: GetMusicFromExternalStorageUseCase
 ) : ViewModel() {
 
     var isPlaying by mutableStateOf(false)

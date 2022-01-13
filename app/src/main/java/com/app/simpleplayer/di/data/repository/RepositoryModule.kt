@@ -1,3 +1,5 @@
+@file:Suppress("unused")
+
 package com.app.simpleplayer.di.data.repository
 
 import com.app.simpleplayer.data.repository.RepositoryImpl
@@ -7,7 +9,6 @@ import dagger.Module
 
 @Module
 interface RepositoryModule {
-
     @Binds
     fun bindRepository(repository: RepositoryImpl): Repository
 }

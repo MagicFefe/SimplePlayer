@@ -4,9 +4,7 @@ import android.app.PendingIntent
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
-import android.support.v4.media.MediaMetadataCompat
 import android.support.v4.media.session.MediaControllerCompat
-import android.support.v4.media.session.MediaSessionCompat
 import com.app.simpleplayer.R
 import com.app.simpleplayer.presentation.utils.title
 import com.google.android.exoplayer2.Player

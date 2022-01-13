@@ -113,14 +113,12 @@ class MusicPlayerService : MediaBrowserServiceCompat() {
     override fun onCreate() {
         super.onCreate()
         (application as SimplePlayerApp).androidInjector().inject(this)
-
         player = ExoPlayer.Builder(this)
             .setHandleAudioBecomingNoisy(true)
             .setAudioAttributes(audioAttributes, true)
             .build().apply {
                 addListener(playerListener)
             }
-
         mediaSession = MediaSessionCompat(this, MEDIA_SESSION_TAG).apply {
             setSessionToken(sessionToken)
             setPlaybackState(stateBuilder.build())
@@ -141,7 +139,6 @@ class MusicPlayerService : MediaBrowserServiceCompat() {
             setSessionActivity(activityPendingIntent)
             isActive = true
         }
-
         scope.launch {
             getMusicFromExternalStorageUseCase().collect { songs ->
                 val convertedSongs = songs.map { song ->

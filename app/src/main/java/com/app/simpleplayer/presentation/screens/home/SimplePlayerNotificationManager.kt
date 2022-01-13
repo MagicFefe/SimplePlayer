@@ -10,9 +10,9 @@ import com.google.android.exoplayer2.ui.PlayerNotificationManager
 import com.google.android.exoplayer2.util.NotificationUtil
 
 class SimplePlayerNotificationManager(
-    private val context: Context,
+    context: Context,
     private val mediaSession: MediaSessionCompat,
-    private val notificationListener: PlayerNotificationManager.NotificationListener
+    notificationListener: PlayerNotificationManager.NotificationListener
 ) {
 
     private val notificationManager = PlayerNotificationManager.Builder(context, 1, NOTIFICATION_CHANNEL_ID)
@@ -20,7 +20,7 @@ class SimplePlayerNotificationManager(
         .setChannelDescriptionResourceId(R.string.player_notification_channel_description)
         .setSmallIconResourceId(R.drawable.ic_baseline_music_note_24)
         .setMediaDescriptionAdapter(SimplePlayerMediaDescriptionAdapter(context, mediaSession.controller))
-        .setChannelImportance(NotificationUtil.IMPORTANCE_DEFAULT)
+        .setChannelImportance(NotificationUtil.IMPORTANCE_LOW)
         .setNotificationListener(notificationListener)
         .build()
 
