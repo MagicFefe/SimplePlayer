@@ -9,12 +9,10 @@ import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.app.simpleplayer.domain.usecases.GetMusicFromExternalStorageUseCase
+import com.app.simpleplayer.presentation.utils.duration
 import com.app.simpleplayer.presentation.utils.title
 import kotlinx.coroutines.FlowPreview
-import kotlinx.coroutines.flow.SharingStarted
-import kotlinx.coroutines.flow.filter
-import kotlinx.coroutines.flow.onEach
-import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.*
 import javax.inject.Inject
 
 class HomeScreenViewModel @Inject constructor(
@@ -25,21 +23,31 @@ class HomeScreenViewModel @Inject constructor(
         private set
     var currentSongTitle by mutableStateOf("")
         private set
+    var currentSongDurationMs by mutableStateOf(0f)
+        private set
     var screenState: HomeScreenUiState by mutableStateOf(HomeScreenUiState.MusicNotLoaded)
         private set
+
     @OptIn(FlowPreview::class)
     val songs = getMusicFromExternalStorageUseCase()
         .filter { it.isNotEmpty() }
         .onEach { screenState = HomeScreenUiState.MusicLoaded() }
         .stateIn(viewModelScope, SharingStarted.Lazily, listOf())
+
     private val mediaControllerCallback = object : MediaControllerCompat.Callback() {
         override fun onPlaybackStateChanged(state: PlaybackStateCompat?) {
             isPlaying = state?.state == PlaybackStateCompat.STATE_PLAYING
         }
 
         override fun onMetadataChanged(metadata: MediaMetadataCompat?) {
-            currentSongTitle = metadata?.title ?: ""
+            if (metadata == null) return
+            currentSongTitle = metadata.title
+            currentSongDurationMs = metadata.duration.toFloat()
         }
+    }
+
+    fun getPlaybackPosition(mediaController: MediaControllerCompat) = flow {
+        emit(mediaController.playbackState.position.toFloat())
     }
 
     fun startPlaying() {

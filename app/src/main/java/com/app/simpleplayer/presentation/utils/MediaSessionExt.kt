@@ -3,12 +3,12 @@ package com.app.simpleplayer.presentation.utils
 import android.support.v4.media.session.MediaSessionCompat
 import android.support.v4.media.session.PlaybackStateCompat
 
-fun MediaSessionCompat.setState(builder: PlaybackStateCompat.Builder, state: Int) {
+fun MediaSessionCompat.setState(state: Int, position: Long) {
     setPlaybackState(
-        builder
+        PlaybackStateCompat.Builder()
             .setState(
                 state,
-                PlaybackStateCompat.PLAYBACK_POSITION_UNKNOWN,
+                position,
                 1f
             )
             .build()

@@ -29,6 +29,7 @@ class MusicManager(private val context: Context) : ContentResolver(context) {
             MediaStore.Audio.Media._ID,
             MediaStore.Audio.Media.TITLE,
             MediaStore.Audio.Media.DATE_ADDED,
+            MediaStore.Audio.Media.DURATION
         )
 
         val sortOrder = "${MediaStore.Audio.Media.DATE_ADDED} ASC"
@@ -46,15 +47,15 @@ class MusicManager(private val context: Context) : ContentResolver(context) {
                 val dateAddedColumn =
                     cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.DATE_ADDED)
                 val titleColumn = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.TITLE)
-
+                val durationColumn = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.DURATION)
                 while (cursor.moveToNext()) {
                     val id = cursor.getLong(idColumn)
                     val dateAdded = cursor.getInt(dateAddedColumn)
                     val uri =
                         ContentUris.withAppendedId(MediaStore.Audio.Media.EXTERNAL_CONTENT_URI, id)
                     val title = cursor.getString(titleColumn)
-
-                    songs.add(Song(id, title, dateAdded, uri))
+                    val duration = cursor.getInt(durationColumn)
+                    songs.add(Song(id, title, dateAdded, uri, duration.toFloat()))
                 }
 
                 emit(songs)

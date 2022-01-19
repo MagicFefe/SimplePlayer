@@ -25,7 +25,7 @@ class SimplePlayerNotificationManager(
         .build()
 
     private val simplePlayerNotification = notificationManager.apply {
-        setUsePreviousAction(false)
+        setUsePreviousAction(true)
         setUseRewindAction(false)
         setUseFastForwardAction(false)
         setMediaSessionToken(mediaSession.sessionToken)

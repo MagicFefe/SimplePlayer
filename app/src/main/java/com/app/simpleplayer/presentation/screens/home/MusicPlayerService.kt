@@ -8,16 +8,14 @@ import android.support.v4.media.MediaBrowserCompat
 import android.support.v4.media.MediaMetadataCompat
 import android.support.v4.media.session.MediaSessionCompat
 import android.support.v4.media.session.PlaybackStateCompat
+import androidx.core.net.toUri
 import androidx.media.MediaBrowserServiceCompat
 import androidx.media.session.MediaButtonReceiver
 import com.app.simpleplayer.SimplePlayerApp
 import com.app.simpleplayer.domain.usecases.GetMusicFromExternalStorageUseCase
 import com.app.simpleplayer.presentation.MainActivity
 import com.app.simpleplayer.presentation.utils.setState
-import com.google.android.exoplayer2.C
-import com.google.android.exoplayer2.ExoPlayer
-import com.google.android.exoplayer2.MediaItem
-import com.google.android.exoplayer2.Player
+import com.google.android.exoplayer2.*
 import com.google.android.exoplayer2.audio.AudioAttributes
 import com.google.android.exoplayer2.ui.PlayerNotificationManager
 import kotlinx.coroutines.*
@@ -32,7 +30,7 @@ class MusicPlayerService : MediaBrowserServiceCompat() {
     private lateinit var player: ExoPlayer
     private lateinit var mediaSession: MediaSessionCompat
 
-    private var playlist = listOf<MediaMetadataCompat>()
+    private var playlistMetadata = listOf<MediaMetadataCompat>()
 
     private val scope = MainScope()
     private val audioAttributes =
@@ -41,12 +39,6 @@ class MusicPlayerService : MediaBrowserServiceCompat() {
             .setUsage(C.USAGE_MEDIA)
             .build()
     private val stateBuilder = PlaybackStateCompat.Builder()
-        .setActions(
-            PlaybackStateCompat.ACTION_PLAY
-                    or PlaybackStateCompat.ACTION_PLAY_PAUSE
-                    or PlaybackStateCompat.ACTION_PAUSE
-                    or PlaybackStateCompat.ACTION_STOP
-        )
 
     private val activityIntent by lazy {
         Intent(this, MainActivity::class.java)
@@ -57,56 +49,13 @@ class MusicPlayerService : MediaBrowserServiceCompat() {
     private val playerNotificationManager by lazy {
         SimplePlayerNotificationManager(this, mediaSession, SimplePlayerNotificationListener())
     }
-
-    private val mediaSessionCallback = object : MediaSessionCompat.Callback() {
-        override fun onPlay() {
-            super.onPlay()
-            play()
-        }
-
-        override fun onPlayFromUri(uri: Uri?, extras: Bundle?) {
-            super.onPlayFromUri(uri, extras)
-            if (uri == null) return
-            val songMetadata = playlist.find { item ->
-                item.getString(MediaMetadataCompat.METADATA_KEY_ART_URI) == uri.toString()
-            }
-            mediaSession.setMetadata(songMetadata)
-            player.setMediaItem(MediaItem.fromUri(uri))
-            play()
-        }
-
-        override fun onPause() {
-            super.onPause()
-            mediaSession.setState(stateBuilder, PlaybackStateCompat.STATE_PAUSED)
-            player.pause()
-            playerNotificationManager.showNotification(player)
-        }
-
-        override fun onStop() {
-            super.onStop()
-            mediaSession.isActive = false
-            playerNotificationManager.hideNotification()
-            player.stop()
-            player.clearMediaItems()
-        }
-
-        private fun play() {
-            //TODO: Implement audioFocus request asap
-            mediaSession.setState(stateBuilder, PlaybackStateCompat.STATE_PLAYING)
-            mediaSession.isActive = true
-            playerNotificationManager.showNotification(player)
-            player.prepare()
-            player.play()
-        }
-    }
-    private val playerListener = object : Player.Listener {
-        override fun onIsPlayingChanged(isPlaying: Boolean) {
-            super.onIsPlayingChanged(isPlaying)
-            if (!isPlaying) {
-                mediaSession.setState(stateBuilder, PlaybackStateCompat.STATE_PAUSED)
-            } else {
-                mediaSession.setState(stateBuilder, PlaybackStateCompat.STATE_PLAYING)
-            }
+    val playlist by lazy {
+        playlistMetadata.map { songMetadata ->
+            MediaItem.fromUri(
+                songMetadata.getString(MediaMetadataCompat.METADATA_KEY_ART_URI)
+                    ?.toUri()
+                    ?: Uri.EMPTY
+            )
         }
     }
 
@@ -117,7 +66,7 @@ class MusicPlayerService : MediaBrowserServiceCompat() {
             .setHandleAudioBecomingNoisy(true)
             .setAudioAttributes(audioAttributes, true)
             .build().apply {
-                addListener(playerListener)
+                addListener(SimplePlayerListener())
             }
         mediaSession = MediaSessionCompat(this, MEDIA_SESSION_TAG).apply {
             setSessionToken(sessionToken)
@@ -135,7 +84,7 @@ class MusicPlayerService : MediaBrowserServiceCompat() {
                     PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
                 )
             )
-            setCallback(mediaSessionCallback)
+            setCallback(SimplePlayerMediaSessionCallback())
             setSessionActivity(activityPendingIntent)
             isActive = true
         }
@@ -145,9 +94,10 @@ class MusicPlayerService : MediaBrowserServiceCompat() {
                     MediaMetadataCompat.Builder()
                         .putString(MediaMetadataCompat.METADATA_KEY_TITLE, song.title)
                         .putString(MediaMetadataCompat.METADATA_KEY_ART_URI, song.uri.toString())
+                        .putLong(MediaMetadataCompat.METADATA_KEY_DURATION, song.duration.toLong())
                         .build()
                 }
-                playlist = convertedSongs
+                playlistMetadata = convertedSongs
             }
         }
     }
@@ -186,6 +136,88 @@ class MusicPlayerService : MediaBrowserServiceCompat() {
         }
         if (scope.isActive) {
             scope.cancel()
+        }
+    }
+
+    private inner class SimplePlayerMediaSessionCallback: MediaSessionCompat.Callback() {
+        override fun onPlay() {
+            super.onPlay()
+            play()
+        }
+
+        override fun onPlayFromUri(uri: Uri?, extras: Bundle?) {
+            super.onPlayFromUri(uri, extras)
+            if (uri == null) return
+            player.currentMediaItem?.let {
+                player.stop()
+                player.clearMediaItems()
+            }
+            player.addMediaItems(listOf(MediaItem.fromUri(uri)) + playlist)
+            play()
+        }
+
+        override fun onPause() {
+            super.onPause()
+            mediaSession.setState(PlaybackStateCompat.STATE_PAUSED, player.currentPosition)
+            player.pause()
+            playerNotificationManager.showNotification(player)
+        }
+
+        override fun onStop() {
+            super.onStop()
+            mediaSession.isActive = false
+            playerNotificationManager.hideNotification()
+            player.stop()
+            player.clearMediaItems()
+        }
+
+        override fun onSkipToNext() {
+            super.onSkipToNext()
+            player.seekToNext()
+        }
+
+        override fun onSkipToPrevious() {
+            super.onSkipToPrevious()
+            player.seekToPrevious()
+        }
+
+        override fun onSeekTo(pos: Long) {
+            super.onSeekTo(pos)
+            player.seekTo(pos)
+        }
+
+        private fun play() {
+            mediaSession.setState(PlaybackStateCompat.STATE_PLAYING, player.currentPosition)
+            mediaSession.isActive = true
+            playerNotificationManager.showNotification(player)
+            player.prepare()
+            player.play()
+        }
+    }
+
+    private inner class SimplePlayerListener: Player.Listener {
+        override fun onIsPlayingChanged(isPlaying: Boolean) {
+            super.onIsPlayingChanged(isPlaying)
+            if (!isPlaying) {
+                mediaSession.setState(PlaybackStateCompat.STATE_PAUSED, player.currentPosition)
+            } else {
+                mediaSession.setState(PlaybackStateCompat.STATE_PLAYING, player.currentPosition)
+            }
+        }
+
+        override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
+            super.onMediaItemTransition(mediaItem, reason)
+            val mediaItemUri = mediaItem?.localConfiguration?.uri
+            val songMetadata = playlistMetadata.find { item ->
+                item.getString(MediaMetadataCompat.METADATA_KEY_ART_URI) == mediaItemUri.toString()
+            }
+            mediaSession.setMetadata(songMetadata)
+            if(mediaSession.controller.playbackState.state == PlaybackStateCompat.STATE_PAUSED) {
+                mediaSession.setState(PlaybackStateCompat.STATE_PAUSED, 0)
+            } else {
+                mediaSession.setState(PlaybackStateCompat.STATE_PLAYING, 0)
+            }
+            playerNotificationManager.showNotification(player)
         }
     }
 

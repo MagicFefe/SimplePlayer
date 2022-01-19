@@ -56,14 +56,12 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    @ExperimentalAnimationApi
-    @OptIn(ExperimentalPermissionsApi::class)
+    @OptIn(ExperimentalPermissionsApi::class, ExperimentalAnimationApi::class)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         getMusic.launch(Manifest.permission.READ_EXTERNAL_STORAGE)
         (application as SimplePlayerApp).androidInjector().inject(this)
         volumeControlStream = AudioManager.STREAM_MUSIC
-
         setContent {
             SimplePlayerTheme {
                 Surface(
@@ -72,15 +70,25 @@ class MainActivity : ComponentActivity() {
                 ) {
                     HomeScreen(
                         viewModel = viewModel,
-                        onSongClick = { startingSong: Song, playlist: List<Song> ->
+                        onGetPlaybackPositionFlow = { viewModel.getPlaybackPosition(mediaController) },
+                        onSongClick = { startingSong: Song ->
                             mediaController.transportControls.playFromUri(startingSong.uri, null)
                         },
-                        onMiniPlayerButtonClick = {
+                        onMiniPlayerPlayPauseButtonClick = {
                             if (viewModel.isPlaying) {
                                 mediaController.transportControls.pause()
                             } else {
                                 mediaController.transportControls.play()
                             }
+                        },
+                        onSkipPreviousButtonClick = {
+                            mediaController.transportControls.skipToPrevious()
+                        },
+                        onSkipNextButtonClick = {
+                            mediaController.transportControls.skipToNext()
+                        },
+                        onSliderPositionChanged = { newPosition ->
+                            mediaController.transportControls.seekTo(newPosition.toLong())
                         }
                     )
                 }
