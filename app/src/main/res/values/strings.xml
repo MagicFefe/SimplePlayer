@@ -3,4 +3,5 @@
     <string name="player_notification_channel_name">Simple Music Player</string>
     <string name="player_notification_channel_description">Player\'s notification</string>
     <string name="player_notification_title">Now playing</string>
+    <string name="contacting_the_user_if_permission_is_denied">Please, grant permission to show all downloaded songs on your device</string>
 </resources>

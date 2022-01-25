@@ -88,6 +88,10 @@ class MusicPlayerService : MediaBrowserServiceCompat() {
             setSessionActivity(activityPendingIntent)
             isActive = true
         }
+    }
+
+    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        MediaButtonReceiver.handleIntent(mediaSession, intent)
         scope.launch {
             getMusicFromExternalStorageUseCase().collect { songs ->
                 val convertedSongs = songs.map { song ->
@@ -100,10 +104,6 @@ class MusicPlayerService : MediaBrowserServiceCompat() {
                 playlistMetadata = convertedSongs
             }
         }
-    }
-
-    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        MediaButtonReceiver.handleIntent(mediaSession, intent)
         return super.onStartCommand(intent, flags, startId)
     }
 
@@ -139,7 +139,7 @@ class MusicPlayerService : MediaBrowserServiceCompat() {
         }
     }
 
-    private inner class SimplePlayerMediaSessionCallback: MediaSessionCompat.Callback() {
+    private inner class SimplePlayerMediaSessionCallback : MediaSessionCompat.Callback() {
         override fun onPlay() {
             super.onPlay()
             play()
@@ -169,6 +169,7 @@ class MusicPlayerService : MediaBrowserServiceCompat() {
             playerNotificationManager.hideNotification()
             player.stop()
             player.clearMediaItems()
+            this@MusicPlayerService.stopSelf()
         }
 
         override fun onSkipToNext() {
@@ -195,7 +196,7 @@ class MusicPlayerService : MediaBrowserServiceCompat() {
         }
     }
 
-    private inner class SimplePlayerListener: Player.Listener {
+    private inner class SimplePlayerListener : Player.Listener {
         override fun onIsPlayingChanged(isPlaying: Boolean) {
             super.onIsPlayingChanged(isPlaying)
             if (!isPlaying) {
@@ -212,7 +213,7 @@ class MusicPlayerService : MediaBrowserServiceCompat() {
                 item.getString(MediaMetadataCompat.METADATA_KEY_ART_URI) == mediaItemUri.toString()
             }
             mediaSession.setMetadata(songMetadata)
-            if(mediaSession.controller.playbackState.state == PlaybackStateCompat.STATE_PAUSED) {
+            if (mediaSession.controller.playbackState.state == PlaybackStateCompat.STATE_PAUSED) {
                 mediaSession.setState(PlaybackStateCompat.STATE_PAUSED, 0)
             } else {
                 mediaSession.setState(PlaybackStateCompat.STATE_PLAYING, 0)

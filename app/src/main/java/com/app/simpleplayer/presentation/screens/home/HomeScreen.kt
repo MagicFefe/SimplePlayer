@@ -3,38 +3,33 @@ package com.app.simpleplayer.presentation.screens.home
 import android.Manifest
 import androidx.compose.animation.*
 import androidx.compose.animation.core.tween
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.*
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Pause
-import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material.icons.filled.SkipNext
-import androidx.compose.material.icons.filled.SkipPrevious
+import androidx.compose.material.icons.filled.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.app.simpleplayer.R
 import com.app.simpleplayer.domain.models.Song
 import com.app.simpleplayer.presentation.ui.common.SongItem
-import com.app.simpleplayer.presentation.utils.collectAsStateDelayed
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.PermissionState
 import com.google.accompanist.permissions.rememberPermissionState
 import kotlinx.coroutines.flow.Flow
 
 const val MINI_PLAYER_COLLAPSED_HEIGHT_DP = 70
-const val DELAY_BEFORE_COLLECTING_FLOW_MS = 1000L
 
 @OptIn(ExperimentalPermissionsApi::class, ExperimentalAnimationApi::class)
 @Composable
@@ -48,9 +43,10 @@ fun HomeScreen(
     onSkipNextButtonClick: () -> Unit,
     onSliderPositionChanged: (Float) -> Unit
 ) {
-    if (permission.hasPermission) {
-        val convertedSongs by viewModel.songs.collectAsState()
-        Box {
+    Box {
+
+        if (permission.hasPermission) {
+            val convertedSongs by viewModel.songs.collectAsState()
             when (val state = viewModel.screenState) {
                 is HomeScreenUiState.MusicNotLoaded -> {
                     CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
@@ -83,26 +79,31 @@ fun HomeScreen(
                             )
                         )
                     ) {
-                        val playbackPosition by onGetPlaybackPositionFlow().collectAsStateDelayed(
-                            initial = 0f,
-                            timeMillis = DELAY_BEFORE_COLLECTING_FLOW_MS
+                        val playbackPosition by onGetPlaybackPositionFlow().collectAsState(
+                            initial = 0f
                         )
                         var collapsed by rememberSaveable { mutableStateOf(true) }
                         MiniPlayer(
                             onMiniPlayerButtonClick = onMiniPlayerPlayPauseButtonClick,
-                            onMiniPlayerClick = { collapsed = !collapsed },
+                            onMiniPlayerExpandCollapseButtonClick = { collapsed = !collapsed },
                             onSkipPreviousButtonClick = onSkipPreviousButtonClick,
                             onSkipNextButtonClick = onSkipNextButtonClick,
                             onSliderPositionChanged = onSliderPositionChanged,
                             playbackPosition = playbackPosition,
-                            songDuration = viewModel.currentSongDurationMs,
+                            songDuration = SimplePlayerConnection.currentSongDurationMs,
                             collapsed = collapsed,
-                            album = viewModel.currentSongTitle,
-                            isPlaying = viewModel.isPlaying
+                            album = SimplePlayerConnection.currentSongTitle,
+                            isPlaying = SimplePlayerConnection.isPlaying
                         )
                     }
                 }
             }
+        } else {
+            Text(
+                modifier = Modifier.align(Alignment.Center),
+                text = stringResource(R.string.contacting_the_user_if_permission_is_denied),
+                fontSize = 30.sp
+            )
         }
     }
 }
@@ -112,7 +113,7 @@ fun HomeScreen(
 fun MiniPlayer(
     modifier: Modifier = Modifier,
     onMiniPlayerButtonClick: () -> Unit,
-    onMiniPlayerClick: () -> Unit,
+    onMiniPlayerExpandCollapseButtonClick: () -> Unit,
     onSkipPreviousButtonClick: () -> Unit,
     onSkipNextButtonClick: () -> Unit,
     onSliderPositionChanged: (Float) -> Unit,
@@ -125,12 +126,7 @@ fun MiniPlayer(
     Surface(
         modifier = modifier
             .fillMaxWidth()
-            .padding(8.dp)
-            .clickable(
-                interactionSource = MutableInteractionSource(),
-                onClick = onMiniPlayerClick,
-                indication = null
-            ),
+            .padding(8.dp),
         color = MaterialTheme.colors.primary,
         shape = RoundedCornerShape(16.dp)
     ) {
@@ -152,7 +148,8 @@ fun MiniPlayer(
                 MiniPlayerCollapsed(
                     album = album,
                     isPlaying = isPlaying,
-                    onMiniPlayerButtonClick = onMiniPlayerButtonClick
+                    onMiniPlayerPlayPauseButtonClick = onMiniPlayerButtonClick,
+                    onMiniPlayerExpandButtonClick = onMiniPlayerExpandCollapseButtonClick
                 )
             } else {
                 MiniPlayerExpanded(
@@ -163,7 +160,8 @@ fun MiniPlayer(
                     onMiniPlayerButtonClick = onMiniPlayerButtonClick,
                     onSkipPreviousButtonClick = onSkipPreviousButtonClick,
                     onSkipNextButtonClick = onSkipNextButtonClick,
-                    onSliderPositionChanged = onSliderPositionChanged
+                    onSliderPositionChanged = onSliderPositionChanged,
+                    onMiniPlayerCollapseButtonClick = onMiniPlayerExpandCollapseButtonClick
                 )
             }
         }
@@ -174,7 +172,8 @@ fun MiniPlayer(
 fun MiniPlayerCollapsed(
     album: String,
     isPlaying: Boolean,
-    onMiniPlayerButtonClick: () -> Unit
+    onMiniPlayerPlayPauseButtonClick: () -> Unit,
+    onMiniPlayerExpandButtonClick: () -> Unit
 ) {
     Row(
         modifier = Modifier
@@ -182,13 +181,24 @@ fun MiniPlayerCollapsed(
             .padding(8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
+        IconButton(
+            onClick = onMiniPlayerExpandButtonClick
+        ) {
+            Icon(
+                imageVector = Icons.Filled.ExpandLess,
+                contentDescription = null
+            )
+        }
         Text(
             modifier = Modifier.weight(1f),
             text = album,
             maxLines = 1,
-            fontWeight = FontWeight.Bold
+            fontWeight = FontWeight.Bold,
+            overflow = TextOverflow.Ellipsis
         )
-        IconButton(onClick = onMiniPlayerButtonClick) {
+        IconButton(
+            onClick = onMiniPlayerPlayPauseButtonClick
+        ) {
             val icon = if (isPlaying) {
                 Icons.Filled.Pause
             } else {
@@ -211,21 +221,35 @@ fun MiniPlayerExpanded(
     onMiniPlayerButtonClick: () -> Unit,
     onSkipPreviousButtonClick: () -> Unit,
     onSkipNextButtonClick: () -> Unit,
-    onSliderPositionChanged: (Float) -> Unit
+    onSliderPositionChanged: (Float) -> Unit,
+    onMiniPlayerCollapseButtonClick: () -> Unit
 ) {
     Surface(
         modifier = Modifier
             .fillMaxHeight()
             .padding(
-                top = 200.dp,
+                top = 6.dp,
                 start = 6.dp,
                 end = 6.dp
             ),
         color = MaterialTheme.colors.primary
     ) {
         Box {
+            IconButton(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .align(Alignment.TopCenter),
+                onClick = onMiniPlayerCollapseButtonClick
+            ) {
+                Icon(
+                    imageVector = Icons.Filled.ExpandMore,
+                    contentDescription = null
+                )
+            }
             Text(
-                modifier = Modifier.align(Alignment.TopCenter),
+                modifier = Modifier
+                    .align(Alignment.TopCenter)
+                    .padding(top = 200.dp),
                 text = album,
                 maxLines = 3,
                 fontWeight = FontWeight.Bold,
@@ -243,9 +267,9 @@ fun MiniPlayerExpanded(
                     onValueChange = onSliderPositionChanged,
                     valueRange = 0.0f..songDuration,
                     colors = SliderDefaults.colors(
-                        thumbColor = Color.White,
-                        activeTrackColor = Color.White.copy(alpha = 0.4f),
-                        activeTickColor = Color.White
+                        thumbColor = MaterialTheme.colors.onPrimary,
+                        activeTrackColor = MaterialTheme.colors.onPrimary.copy(alpha = 0.4f),
+                        activeTickColor = MaterialTheme.colors.onPrimary
                     )
                 )
                 Row {
@@ -321,7 +345,7 @@ fun MiniPlayer_Preview() {
         MiniPlayer(
             onMiniPlayerButtonClick = {
             },
-            onMiniPlayerClick = {
+            onMiniPlayerExpandCollapseButtonClick = {
             },
             onSkipPreviousButtonClick = {
             },
