@@ -8,7 +8,6 @@ import android.support.v4.media.MediaBrowserCompat
 import android.support.v4.media.MediaMetadataCompat
 import android.support.v4.media.session.MediaControllerCompat
 import android.support.v4.media.session.PlaybackStateCompat
-import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
@@ -102,7 +101,6 @@ class MainActivity : ComponentActivity() {
                         },
                         onSongClick = { startingSong: Song ->
                             mediaController.transportControls.playFromUri(startingSong.uri, null)
-                            Log.d("DDDD", "${startingSong.uri}")
                         },
                         onMiniPlayerPlayPauseButtonClick = {
                             if (SimplePlayerConnection.isPlaying) {
